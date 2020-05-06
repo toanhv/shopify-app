@@ -8,8 +8,6 @@ use Yii;
 use yii\base\InvalidArgumentException;
 use yii\web\BadRequestHttpException;
 use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
 use common\models\LoginForm;
 use frontend\models\PasswordResetRequestForm;
 use frontend\models\ResetPasswordForm;
@@ -43,46 +41,17 @@ class SiteController extends Controller {
      */
     public function actionIndex() {
         $this->layout = 'shopify';
-//
-//        $provider = new \Pizdata\OAuth2\Client\Provider\Shopify([
-//            'clientId' => '10d83ed8a8ec65af0d374cd672688626', // The client ID assigned to you by the Shopify
-//            'clientSecret' => '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', // The client password assigned to you by the Shopify
-//            'redirectUri' => 'https://5626b521.ngrok.io/auth/callback', // The redirect URI assigned to you
-//            'shop' => ($_GET && $_GET['shop']) ? $_GET['shop'] : 'minhchau1826.myshopify.com', // The Shop name
-//        ]);
-//
-//        // If we don't have an authorization code then get one
-//        if ($_GET && $_GET['code']) {
-//            // Setting up scope
-//            $options = [
-//                'scope' => [
-//                    'read_content', 'write_content',
-//                    'read_themes', 'write_themes',
-//                    'read_products', 'write_products',
-//                    'read_customers', 'write_customers',
-//                    'read_orders', 'write_orders',
-//                    'read_draft_orders', 'write_draft_orders',
-//                    'read_script_tags', 'write_script_tags',
-//                    'read_fulfillments', 'write_fulfillments',
-//                    'read_shipping', 'write_shipping',
-//                    'read_analytics',
-//                ]
-//            ];
-//            // Fetch the authorization URL from the provider; this returns the
-//            // urlAuthorize option and generates and applies any necessary parameters
-//            // (e.g. state).
-//            $authorizationUrl = $provider->getAuthorizationUrl($options);
-//
-//            // Get the state generated for you and store it to the session.
-//            $_SESSION['oauth2state'] = $provider->getState();
-//
-//            // Redirect the user to the authorization URL.
-//            header('Location: ' . $authorizationUrl);
-//            exit;
-//
-//            // Check given state against previously stored one to mitigate CSRF attack
-//        }
 
+        // Set variables for our request
+        $shop = "minhchau1826";
+        $token = trim(\Yii::$app->params['titlebar']['api_key']);
+        $query = array(
+            "Content-type" => "application/json" // Tell Shopify that we're expecting a response in JSON format
+        );
+        // Run API call to get all products
+        $products = \common\libs\shopify\Service::shopify_call($token, $shop, "/admin/titlebar.json", array(), 'GET');
+        // Get response
+        $products = $products['response'];
         return $this->render('index');
     }
 
@@ -105,7 +74,7 @@ class SiteController extends Controller {
                 "client_secret" => $shared_secret, // Your app credentials (secret key)
                 "code" => $params['code'] // Grab the access key from the URL
             );
-
+            $sessionKey = 'shopify_access_token';
             // Generate access token URL
             $access_token_url = "https://" . $params['shop'] . "/admin/oauth/access_token";
 
@@ -121,14 +90,13 @@ class SiteController extends Controller {
             // Store the access token
             $result = json_decode($result, true);
             $access_token = $result['access_token'];
-
-            // Show the access token (don't do this in production!)
-            return $access_token;
+            Yii::$app->session->set($sessionKey, $access_token);
         } else {
             // Someone is trying to be shady!
             echo ('This request is NOT from Shopify!');
             return;
         }
+        return $this->goHome();
     }
 
     /**

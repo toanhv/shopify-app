@@ -10,11 +10,11 @@ namespace common\libs\shopify;
 
 class Service {
 
-    function shopify_call($token, $shop, $api_endpoint, $query = array(), $method = 'GET', $request_headers = array()) {
+    public static function shopify_call($token, $shop, $api_endpoint, $query = array(), $method = 'GET', $request_headers = array()) {
         // Build URL
-        $url = "https://" . $shop . ".myshopify.com" . $api_endpoint;
+        $url = "https://" . trim($shop, '.myshopify.com') . '.myshopify.com' . $api_endpoint;
         if (!is_null($query) && in_array($method, array('GET', 'DELETE')))
-            $url = $url . "?" . http_build_query($query);
+            $url .= "?" . http_build_query($query);
 
         // Configure cURL
         $curl = curl_init($url);
@@ -32,13 +32,15 @@ class Service {
 
         // Setup headers
         $request_headers[] = "";
-        if (!is_null($token))
+        if (!is_null($token)) {
             $request_headers[] = "X-Shopify-Access-Token: " . $token;
+        }
         curl_setopt($curl, CURLOPT_HTTPHEADER, $request_headers);
 
         if ($method != 'GET' && in_array($method, array('POST', 'PUT'))) {
-            if (is_array($query))
+            if (is_array($query)) {
                 $query = http_build_query($query);
+            }
             curl_setopt($curl, CURLOPT_POSTFIELDS, $query);
         }
 
